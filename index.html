@@ -11,11 +11,11 @@
   var respecConfig = {
     "doRDFa": false,
     "format": "markdown",
-    "githubAPI": "https://api.github.com/repos/WICG/geolocation-client-hints",
-    "issueBase": "https://www.github.com/WICG/geolocation-client-hints/issues/",
+    "githubAPI": "https://api.github.com/repos/luisbargu/geolocation-client-hint",
+    "issueBase": "https://www.github.com/luisbargu/geolocation-client-hint/issues/",
     "noLegacyStyle": true,
     "editors": [{
-        name: "Luis Barguno Jane",
+        name: "Luis Barguno",
         email: "lbargu@google.com",
         company: "Google Inc.",
         companyURL: "https://www.google.com",
@@ -23,21 +23,21 @@
       // Add additional editors here.
       // https://github.com/w3c/respec/wiki/editors
     ],
-    "shortName": "geolocation-client-hints",
+    "shortName": "geolocation-client-hint",
     "specStatus": "CG-DRAFT",
-    "subjectPrefix": "[geolocation-client-hints]",
+    "subjectPrefix": "[geolocation-client-hint]",
     "wg": "WICG",
     "otherLinks": [{
       "key": "Repository",
       "data": [{
         "value": "We are on Github.",
-        "href": "https://github.com/WICG/geolocation-client-hints"
+        "href": "https://github.com/luisbargu/geolocation-client-hint"
       }, {
         "value": "File a bug.",
-        "href": "https://github.com/WICG/geolocation-client-hints/issues"
+        "href": "https://github.com/luisbargu/geolocation-client-hint/issues"
       }, {
         "value": "Commit history.",
-        "href": "https://github.com/WICG/geolocation-client-hints/commits/gh-pages"
+        "href": "https://github.com/luisbargu/geolocation-client-hint/commits/master"
       }, ]
     }],
   };
@@ -47,7 +47,10 @@
 <body>
   <section id="abstract">
     <p>
-      This specification does neat stuff.
+    This document describes an HTTP Client Hint header for Geolocation. This will allow apps to provide a local experience to users.
+    </p>
+    <p>
+    This mechanism, through Client Hints, provides a single-round-trip solution to obtain location-aware responses from location-aware services, as opposed to existing JS-based Geolocation API solutions that require two round trips.
     </p>
   </section>
   <section id="sotd">
@@ -58,29 +61,243 @@
   <section id="introduction">
     <h2>Introduction</h2>
     <p>
-      See <a href="https://github.com/w3c/respec/wiki/User's-Guide">ReSpec's
-      user guide</a> for how to get started!
+    The Javascript W3C Geolocation API [[Geolocation-API]] is the only existing mechanism to share a location with a host. This leads to some limitations. First, in order to have the server know the client’s location there are two full round trips required (one round trip to load the page with Javascript code, and a second round trip to actually send the location to the server and get back a location-aware response). While not as significant as the first limitation, the second limitation is that the client must execute Javascript in order to acquire location.
+    </p>
+    <p>
+    Having a performant and safe mechanism to share a fresh device location is increasingly necessary, especially on mobile devices.
     </p>
   </section>
-  <section data-dfn-for="Foo">
-    <h2>Start your spec!</h2>
+  
+  <section id="example">
+    <h2>Example</h2>
+    <p>
+    A host uses the "Accept-CH" header to advertise support for "Geolocation" (HTML meta element with http-equiv attribute could also be used).
+    </p>
+    <p>
+    The host can also include an "Accept-CH-Lifetime" header to specify the lifetime of this client hint.
+    </p>
+    <p>
+    This follows the exact same semantics detailed in <a href="https://tools.ietf.org/html/draft-ietf-httpbis-client-hints-04">IETF draft for Client Hints </a>
+    </p>
     <pre class="idl">
-    interface Foo {
-      attribute Bar bar;
-      void doTheFoo();
-    };
+Accept-CH: Geolocation
+Accept-CH-Lifetime: 86400
     </pre>
-    <p>
-      See <a href="https://github.com/w3c/respec/wiki/WebIDL-Guide">ReSpec's
-      WebIDL guide</a> for how to write [[!WebIDL-2]] interfaces!
     </p>
     <p>
-      The <dfn>doTheFoo</dfn> method.
+    A compatible user agent, would then verify if the origin has permission to access the Geolocation JS API. If permissions are granted, then in navigation requests (top level frame) over secure contexts [[Secure-Contexts]], it would send the Geolocation header to the host.
     </p>
-    <p>
-      The <dfn>bar</dfn> attribute.
-    </p>
+    <pre class="idl">
+Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
+             Timestamp=1495804846156; AltitudeAccuracy=20;
+             Speed=1.5; Heading=27.53;
+    </pre>
   </section>
+  <section id="geolocation-client-hint">
+    <h2>Geolocation (Client Hint)</h2>
+    <p>
+    A user agent request MAY include a Geolocation header.
+    </p>
+    <p>
+    The header identifier used for this purpose is "Geolocation", and the content of the header MUST follow the following ABNF grammar.
+    </p>
+    <p>
+    <b>TODO: Move all the comment content into normative text below the ABNF grammar. Temporarily here for discussion</b>
+    </p>
+    <pre class="idl">
+    "Geolocation" ":" 1#geolocation-directive
+    
+    
+    geolocation-directive = position-directive
+    / position-error-directive
+    
+    
+    position-directive =
+    "Position" "=" position-value OWS ";" OWS
+    "Accuracy" "=" position-accuracy-value OWS ";" OWS
+    "Timestamp" "=" timestamp-value OWS ";" OWS
+    [ "AltitudeAccuracy" "=" altitude-accuracy-value OWS ";" OWS ]
+    [ "Speed" "=" speed-value OWS ";" OWS ]
+    [ "Heading" "=" heading-value OWS ";" OWS ]
+    
+    position-error-directive =
+    "PositionError" "=" position-error-value OWS ";" OWS
+    
+    ; The position format is based on RFC7946
+    ;  (https://tools.ietf.org/html/rfc7946)
+    position-value = "["
+    ; Longitude in WGS84 coordinates
+    longitude-decimal-value OWS "," OWS
+    ; Latitude in WGS84 coordinates
+    latitude-decimal-value OWS
+    ; Altitude in meters above sea level.
+    [ "," OWS altitude-meters-decimal-value  OWS]
+    "]"
+    
+    ; Position accuracy is specified in meters as the error radius of
+    ; the position. MUST be a non-negative decimal number.
+    position-accuracy-value = non-negative-decimal-meters
+    
+    ; Timestamp represents when the Position was computed. MUST be a
+    ; positive integer value, representing milliseconds since the UNIX
+    ; epoch of 1 January 1970 at 00:00 UTC.
+    timestamp-value = positive-integer-milliseconds
+    
+    ; Altitude accuracy is specified in meters as the error of the
+    ; altitude. When altitude is not provided as part of the Position,
+    ; this attribute MUST not be included. Otherwise, the value of this
+    ; attribute MUST be a non-negative decimal number.
+    altitude-accuracy-value = non-negative-decimal-meters
+    
+    ; Speed is specified in meters per second, as the device's current
+    ; speed. When proviced, MUST be a non-negative decimal number. If
+    ; the device is not moving, the speed attribute MUST not be
+    ; included.
+    speed-value = non-negative-decimal-meters-per-second
+    
+    ; Heading represents the bearing, that is the direction of the
+    ; device, specified in degrees clockwise direction relative to the
+    ; north. When provided, MUST be a decimal number between 0 and 360.
+    ; If the device is not moving, the speed attribute MUST not be
+    ; included.
+    heading-value = decimal-between-0-and-360-north-clockwise-degrees
+    
+    ; Position error is a positive integer error code, matching a subset
+    ; of the JS Geolocation PositionError codes:
+    ; PERMISSION_DENIED = "1"
+    ; POSITION_UNAVAILABLE = "2"
+    ; TIMEOUT = "3"
+    ; This position error is used when the user agent cannot send the
+    ; actual position information but the origin has advertised
+    ; Geolocation support.
+    position-error-value = positive-integer-error-code
+    </pre>
+
+    <p>
+    These attributes match the data exposed through the Javascript [[Geolocation-API]].
+    </p>
+    <p>
+    This header is used to send geolocation data from the user agent to the server.
+    </p>
+    <p>
+    Examples:
+    </p>
+    <pre class="idl">
+    Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
+                 Timestamp=1495804846156; AltitudeAccuracy=20;
+                 Speed=1.5; Heading=27.53;
+    
+    Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
+                 Timestamp=1495804846156;
+    
+    Geolocation: PositionError=3
+    
+    Geolocation: PositionError=1
+    </pre>
+  </section>
+  <section id="best-effort">
+      <h2>Best effort</h2>
+      <p>
+      A Geolocation Client Hint should follow a best effort approach from the user agent. Computing location can be expensive, and it is recommended that the user agent does not block a request only because Position is missing. It is recommended that Position is only attached when it is already available to the user agent. If Position is not available but permissions are granted, PositionError=3 (TIMEOUT) should be sent instead.
+      </p>
+      <p>
+      The user agent MAY internally precompute, cache, and keep geolocation information available and fresh, so when it is required to be attached in a server request, the Position is more likely to be available.
+      </p>
+  </section>
+
+  <section id="js-integration">
+      <h2>Integration with JS Geolocation API</h2>
+      <p>
+      The data exposed through the Geolocation Header matches the data exposed through the W3C Javascript geolocation API.
+      </p>
+      <p>
+      The user agent MUST use a consistent and unified permission-control mechanism for both location-sharing technologies, to guarantee user clarity. In particular, the Geolocation Client Hint MUST rely on the state of the geolocation permission [[Permissions]].
+      </p>
+      <p>
+      A certain origin MUST first obtain permissions through the JS Geolocation API in order to start receiving the Geolocation Position data. The Geolocation Client Hint is not adding any new user interface in order to acquire geolocation permission, and will rely on the existing JS permission acquisition mechanisms and per-origin semantics.
+      </p>
+      <p>
+      This means that obtaining permissions through the JS Geolocation API is a prerequisite for any origin, before the user agent can start providing Position data through the Geolocation header.
+      </p>
+      <p>
+      This would be an expected sequence between client and server:
+      </p>
+      <pre class="idl">
+  Client                                                        Host
+    | <----------------------------------- Accept-CH:Geolocation |
+    | Geolocation:PositionError=1 -----------------------------> |
+    | <------------------------ Include JS to acquire permission |
+    | == User grants permission through JS Geolocation API UI == |
+    | Geolocation:Position=X[...] -----------------------------> |
+      </pre>
+      <p>
+      Then, as long as permission remains granted and the lifetime of CH remains valid, any subsequent navigation request from Client to this origin over HTTPS will include the Geolocation header with Position.
+      </p>
+  </section>
+
+  <section id="negotiation-privacy-security">
+      <h2>Negotiation, Privacy and Security</h2>
+      <p>
+      The Position data exposed in the Geolocation header is very sensitive information, and thereby potentially compromises the user's privacy. The following mechanisms guarantee the privacy of the user is protected.
+      </p>
+      <h3>
+      User agent Considerations
+      </h3>
+      <p>
+      <b>Ensure that no position information is made available through this header without the user's permission.</b>
+      </p>
+      <p>
+      See previous section for details on integration with JS Geolocation permissions.
+      </p>
+      <p>
+      <b>Ensure that position information is only sent in navigation (top level frame) requests, when the origin receiving the position information is visible to the user in the UI (e.g. navigational address bar).</b>
+      </p>
+      <p>
+      Given that Geolocation holds sensitive information, this condition guarantees a site can not silently receive this information (e.g. through cross-site requests).
+      </p>
+      <p>
+      Observe that this condition is additional to the generic "Accept-CH-Lifetime", and is designed to add an extra constraint for privacy sensitive data.
+      </p>
+      <p>
+      <b>
+      Only send Geolocation header on secure contexts.
+      </b>
+      </p>
+      <p>
+      The Geolocation header will only be included in HTTPS secure contexts. Geolocation MUST not be sent in a non-encrypted connection.
+      </p>
+      <h3>
+      Server Considerations
+      </h3>
+      <p>
+      <b>Location information needs to be requested only when necessary.</b>
+      </p>
+      <p>
+      Given that Geolocation permission is per-origin, hosts should partition their functionality and security boundaries per-origin. A host should only advertise support for "Accept-CH: Geolocation" when it offers location-aware services on that origin. It is recommended that non-location-aware use cases do not share the same origin. This limits the scope of Geolocation, to only relevant services.
+      </p>
+      <p>
+      <b>Location data needs to be handled responsibly and transparently.</b>
+      </p>
+      <p>
+      The server should only use location information for the service for which it was provided by the user agent. Location data needs to be protected from unauthorized access by third parties. It should also be disposed once the task is completed, or retained according to terms of service acknowledged by the user. When this data is stored, users should have access to it and the right to delete it at anytime.
+      </p>
+      <p>
+      The server should disclose the following: The fact that they are collecting location data, why they are collection location data, security policy for location data, retention policy of location data, whether this location data is shared and how, and explain to the user how to access and delete this data on the server.
+      </p>
+  </section>
+  <section id="header-field-registration">
+      <h2>Header field registration</h2>
+      <p>
+      The message header fields should be added to the permanent registry [[RFC3864]]: Geolocation.
+      </p>
+      <p>
+      The applicable protocol is HTTP. Format specification is detailed in this document.
+      </p>
+      <p>
+      Geolocation is defined using US-ASCII.
+      </p>
+  </section>
+  
 </body>
 
 </html>
