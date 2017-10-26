@@ -79,19 +79,18 @@
     <p>
     This follows the exact same semantics detailed in <a href="https://tools.ietf.org/html/draft-ietf-httpbis-client-hints-04">IETF draft for Client Hints </a>
     </p>
-    <pre class="idl">
+    <pre><code>
 Accept-CH: Geolocation
 Accept-CH-Lifetime: 86400
-    </pre>
-    </p>
+    </code></pre>
     <p>
     A compatible user agent, would then verify if the origin has permission to access the Geolocation JS API. If permissions are granted, then in navigation requests (top level frame) over secure contexts [[Secure-Contexts]], it would send the Geolocation header to the host.
     </p>
-    <pre class="idl">
+    <pre><code>
 Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
              Timestamp=1495804846156; AltitudeAccuracy=20;
              Speed=1.5; Heading=27.53;
-    </pre>
+    </code></pre>
   </section>
   <section id="geolocation-client-hint">
     <h2>Geolocation (Client Hint)</h2>
@@ -104,74 +103,73 @@ Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
     <p>
     <b>TODO: Move all the comment content into normative text below the ABNF grammar. Temporarily here for discussion</b>
     </p>
-    <pre class="idl">
-    "Geolocation" ":" 1#geolocation-directive
+    <pre><code>
+"Geolocation" ":" 1#geolocation-directive
+    
+geolocation-directive = position-directive
+                        / position-error-directive
     
     
-    geolocation-directive = position-directive
-    / position-error-directive
+position-directive =
+"Position" "=" position-value OWS ";" OWS
+"Accuracy" "=" position-accuracy-value OWS ";" OWS
+"Timestamp" "=" timestamp-value OWS ";" OWS
+[ "AltitudeAccuracy" "=" altitude-accuracy-value OWS ";" OWS ]
+[ "Speed" "=" speed-value OWS ";" OWS ]
+[ "Heading" "=" heading-value OWS ";" OWS ]
     
+position-error-directive =
+"PositionError" "=" position-error-value OWS ";" OWS
     
-    position-directive =
-    "Position" "=" position-value OWS ";" OWS
-    "Accuracy" "=" position-accuracy-value OWS ";" OWS
-    "Timestamp" "=" timestamp-value OWS ";" OWS
-    [ "AltitudeAccuracy" "=" altitude-accuracy-value OWS ";" OWS ]
-    [ "Speed" "=" speed-value OWS ";" OWS ]
-    [ "Heading" "=" heading-value OWS ";" OWS ]
+; The position format is based on RFC7946
+;  (https://tools.ietf.org/html/rfc7946)
+position-value = "["
+; Longitude in WGS84 coordinates
+longitude-decimal-value OWS "," OWS
+; Latitude in WGS84 coordinates
+latitude-decimal-value OWS
+; Altitude in meters above sea level.
+[ "," OWS altitude-meters-decimal-value  OWS]
+"]"
     
-    position-error-directive =
-    "PositionError" "=" position-error-value OWS ";" OWS
+; Position accuracy is specified in meters as the error radius of
+; the position. MUST be a non-negative decimal number.
+position-accuracy-value = non-negative-decimal-meters
     
-    ; The position format is based on RFC7946
-    ;  (https://tools.ietf.org/html/rfc7946)
-    position-value = "["
-    ; Longitude in WGS84 coordinates
-    longitude-decimal-value OWS "," OWS
-    ; Latitude in WGS84 coordinates
-    latitude-decimal-value OWS
-    ; Altitude in meters above sea level.
-    [ "," OWS altitude-meters-decimal-value  OWS]
-    "]"
+; Timestamp represents when the Position was computed. MUST be a
+; positive integer value, representing milliseconds since the UNIX
+; epoch of 1 January 1970 at 00:00 UTC.
+timestamp-value = positive-integer-milliseconds
     
-    ; Position accuracy is specified in meters as the error radius of
-    ; the position. MUST be a non-negative decimal number.
-    position-accuracy-value = non-negative-decimal-meters
+; Altitude accuracy is specified in meters as the error of the
+; altitude. When altitude is not provided as part of the Position,
+; this attribute MUST not be included. Otherwise, the value of this
+; attribute MUST be a non-negative decimal number.
+altitude-accuracy-value = non-negative-decimal-meters
     
-    ; Timestamp represents when the Position was computed. MUST be a
-    ; positive integer value, representing milliseconds since the UNIX
-    ; epoch of 1 January 1970 at 00:00 UTC.
-    timestamp-value = positive-integer-milliseconds
+; Speed is specified in meters per second, as the device's current
+; speed. When proviced, MUST be a non-negative decimal number. If
+; the device is not moving, the speed attribute MUST not be
+; included.
+speed-value = non-negative-decimal-meters-per-second
     
-    ; Altitude accuracy is specified in meters as the error of the
-    ; altitude. When altitude is not provided as part of the Position,
-    ; this attribute MUST not be included. Otherwise, the value of this
-    ; attribute MUST be a non-negative decimal number.
-    altitude-accuracy-value = non-negative-decimal-meters
+; Heading represents the bearing, that is the direction of the
+; device, specified in degrees clockwise direction relative to the
+; north. When provided, MUST be a decimal number between 0 and 360.
+; If the device is not moving, the speed attribute MUST not be
+; included.
+heading-value = decimal-between-0-and-360-north-clockwise-degrees
     
-    ; Speed is specified in meters per second, as the device's current
-    ; speed. When proviced, MUST be a non-negative decimal number. If
-    ; the device is not moving, the speed attribute MUST not be
-    ; included.
-    speed-value = non-negative-decimal-meters-per-second
-    
-    ; Heading represents the bearing, that is the direction of the
-    ; device, specified in degrees clockwise direction relative to the
-    ; north. When provided, MUST be a decimal number between 0 and 360.
-    ; If the device is not moving, the speed attribute MUST not be
-    ; included.
-    heading-value = decimal-between-0-and-360-north-clockwise-degrees
-    
-    ; Position error is a positive integer error code, matching a subset
-    ; of the JS Geolocation PositionError codes:
-    ; PERMISSION_DENIED = "1"
-    ; POSITION_UNAVAILABLE = "2"
-    ; TIMEOUT = "3"
-    ; This position error is used when the user agent cannot send the
-    ; actual position information but the origin has advertised
-    ; Geolocation support.
-    position-error-value = positive-integer-error-code
-    </pre>
+; Position error is a positive integer error code, matching a subset
+; of the JS Geolocation PositionError codes:
+; PERMISSION_DENIED = "1"
+; POSITION_UNAVAILABLE = "2"
+; TIMEOUT = "3"
+; This position error is used when the user agent cannot send the
+; actual position information but the origin has advertised
+; Geolocation support.
+position-error-value = positive-integer-error-code
+    </code></pre>
 
     <p>
     These attributes match the data exposed through the Javascript [[Geolocation-API]].
@@ -182,23 +180,23 @@ Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
     <p>
     Examples:
     </p>
-    <pre class="idl">
-    Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
-                 Timestamp=1495804846156; AltitudeAccuracy=20;
-                 Speed=1.5; Heading=27.53;
+    <pre><code>
+Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
+             Timestamp=1495804846156; AltitudeAccuracy=20;
+             Speed=1.5; Heading=27.53;
     
-    Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
-                 Timestamp=1495804846156;
+Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
+             Timestamp=1495804846156;
     
-    Geolocation: PositionError=3
+Geolocation: PositionError=3
     
-    Geolocation: PositionError=1
-    </pre>
+Geolocation: PositionError=1
+    </code></pre>
   </section>
   <section id="best-effort">
       <h2>Best effort</h2>
       <p>
-      A Geolocation Client Hint should follow a best effort approach from the user agent. Computing location can be expensive, and it is recommended that the user agent does not block a request only because Position is missing. It is recommended that Position is only attached when it is already available to the user agent. If Position is not available but permissions are granted, PositionError=3 (TIMEOUT) should be sent instead.
+      It is recommended that a Geolocation Client Hint follows a best effort approach from the user agent. Computing location can be expensive, and it is recommended that the user agent does not block a request only because Position is missing. It is recommended that Position is only attached when it is already available to the user agent. If Position is not available but permissions are granted, PositionError=3 (TIMEOUT) should be sent instead.
       </p>
       <p>
       The user agent MAY internally precompute, cache, and keep geolocation information available and fresh, so when it is required to be attached in a server request, the Position is more likely to be available.
@@ -222,14 +220,14 @@ Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
       <p>
       This would be an expected sequence between client and server:
       </p>
-      <pre class="idl">
-  Client                                                        Host
-    | <----------------------------------- Accept-CH:Geolocation |
-    | Geolocation:PositionError=1 -----------------------------> |
-    | <------------------------ Include JS to acquire permission |
-    | == User grants permission through JS Geolocation API UI == |
-    | Geolocation:Position=X[...] -----------------------------> |
-      </pre>
+      <pre><code>
+Client                                                        Host
+  | <----------------------------------- Accept-CH:Geolocation |
+  | Geolocation:PositionError=1 -----------------------------> |
+  | <------------------------ Include JS to acquire permission |
+  | == User grants permission through JS Geolocation API UI == |
+  | Geolocation:Position=X[...] -----------------------------> |
+      </code></pre>
       <p>
       Then, as long as permission remains granted and the lifetime of CH remains valid, any subsequent navigation request from Client to this origin over HTTPS will include the Geolocation header with Position.
       </p>
@@ -273,7 +271,7 @@ Geolocation: Position=[47.368684, 8.535741, 345]; Accuracy=10;
       <b>Location information needs to be requested only when necessary.</b>
       </p>
       <p>
-      Given that Geolocation permission is per-origin, hosts should partition their functionality and security boundaries per-origin. A host should only advertise support for "Accept-CH: Geolocation" when it offers location-aware services on that origin. It is recommended that non-location-aware use cases do not share the same origin. This limits the scope of Geolocation, to only relevant services.
+      Given that Geolocation permission is per-origin, hosts are recommended to partition their functionality and security boundaries per-origin. A host only advertises support for "Accept-CH: Geolocation" when it offers location-aware services on that origin. It is recommended that non-location-aware use cases do not share the same origin. This limits the scope of Geolocation, to only relevant services.
       </p>
       <p>
       <b>Location data needs to be handled responsibly and transparently.</b>
