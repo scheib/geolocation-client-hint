@@ -68,8 +68,52 @@
     </p>
   </section>
   
-  <section id="example">
-    <h2>Example</h2>
+  <section id="js-integration">
+      <h2>Standard flow and integration with JS Geolocation API</h2>
+      <p>
+      The data exposed through the Geolocation Header matches the data exposed through the W3C Javascript geolocation API.
+      </p>
+      <p>
+      The user agent MUST use a consistent and unified permission-control mechanism for both location-sharing technologies, to guarantee user clarity. In particular, the Geolocation Client Hint MUST rely on the state of the geolocation permission [[Permissions]].
+      </p>
+      <p>
+      A certain origin MUST first obtain permissions through the JS Geolocation API in order to start receiving the Geolocation Position data. The Geolocation Client Hint is not adding any new user interface in order to acquire geolocation permission, and will rely on the existing JS permission acquisition mechanisms and per-origin semantics.
+      </p>
+      <p>
+      This means that obtaining permissions through the JS Geolocation API is a prerequisite for any origin, before the user agent can start providing Position data through the Geolocation header.
+      </p>
+      <p>
+      This would be an expected sequence between a compltely "clean/new client" and server:
+      </p>
+      <pre><code>
+Client                                                        Host
+  |                                | Accept-CH:Geolocation     |
+  | <------------------------------|                           |
+  |                                | Accept-CH-Lifetime: 86400 |
+  |                                                            |
+  | Geolocation:PositionError=1 -----------------------------> |
+  |                                                            |
+  | <------------------------ Include JS to acquire permission |
+  |                                                            |
+  | == User grants permission through JS Geolocation API UI == |
+  |                                                            |
+  | Geolocation:Position=X[...] -----------------------------> |
+  |                                                            |
+      </code></pre>
+      <p>
+      Then, as long as permission remains granted and the lifetime of CH remains valid, any subsequent navigation request from Client to this origin over HTTPS will include the Geolocation header with Position. So a single roundtrip to the server will be required to provide a response based on device location.
+      </p>
+      <pre><code>
+Client                                                        Host
+  |                                                            |
+  | Geolocation:Position=X[...] -----------------------------> |
+  | <----------------------- Response based on device location |
+  |                                                            |
+      </code></pre>
+  </section>
+
+  <section id="header-examples">
+    <h2>Header Examples</h2>
     <p>
     A host uses the "Accept-CH" header to advertise support for "Geolocation" (HTML meta element with http-equiv attribute could also be used).
     </p>
@@ -200,36 +244,6 @@ Geolocation: PositionError=1
       </p>
       <p>
       The user agent MAY internally precompute, cache, and keep geolocation information available and fresh, so when it is required to be attached in a server request, the Position is more likely to be available.
-      </p>
-  </section>
-
-  <section id="js-integration">
-      <h2>Integration with JS Geolocation API</h2>
-      <p>
-      The data exposed through the Geolocation Header matches the data exposed through the W3C Javascript geolocation API.
-      </p>
-      <p>
-      The user agent MUST use a consistent and unified permission-control mechanism for both location-sharing technologies, to guarantee user clarity. In particular, the Geolocation Client Hint MUST rely on the state of the geolocation permission [[Permissions]].
-      </p>
-      <p>
-      A certain origin MUST first obtain permissions through the JS Geolocation API in order to start receiving the Geolocation Position data. The Geolocation Client Hint is not adding any new user interface in order to acquire geolocation permission, and will rely on the existing JS permission acquisition mechanisms and per-origin semantics.
-      </p>
-      <p>
-      This means that obtaining permissions through the JS Geolocation API is a prerequisite for any origin, before the user agent can start providing Position data through the Geolocation header.
-      </p>
-      <p>
-      This would be an expected sequence between client and server:
-      </p>
-      <pre><code>
-Client                                                        Host
-  | <----------------------------------- Accept-CH:Geolocation |
-  | Geolocation:PositionError=1 -----------------------------> |
-  | <------------------------ Include JS to acquire permission |
-  | == User grants permission through JS Geolocation API UI == |
-  | Geolocation:Position=X[...] -----------------------------> |
-      </code></pre>
-      <p>
-      Then, as long as permission remains granted and the lifetime of CH remains valid, any subsequent navigation request from Client to this origin over HTTPS will include the Geolocation header with Position.
       </p>
   </section>
 
