@@ -63,6 +63,19 @@
     <p>
     The Javascript W3C Geolocation API [[Geolocation-API]] is the only existing mechanism to share a location with a host. This leads to some limitations. First, in order to have the server know the client’s location there are two full round trips required (one round trip to load the page with Javascript code, and a second round trip to actually send the location to the server and get back a location-aware response). While not as significant as the first limitation, the second limitation is that the client must execute Javascript in order to acquire location.
     </p>
+    <pre><code>
+Client                                                        Host
+  | Request for a geolocation-based service -----------------> |
+  |                                                            |
+  | <----------------------- Include JS to acquire geolocation |
+  |                                                            |
+  | ==== Execute JS and obtain geolocation through JS API ==== |
+  |                                                            |
+  | Request to send device location to the server -----------> |
+  |                                                            |
+  | <----------------------- Response based on device location |
+  |                                                            |
+    </code></pre>
     <p>
     Having a performant and safe mechanism to share a fresh device location is increasingly necessary, especially on mobile devices.
     </p>
@@ -78,24 +91,28 @@
       </p>
       <pre><code>
 Client                                                        Host
+  | Request for a geolocation-based service -----------------> |
+  |                                                            |
   | <------------------------ Include JS to acquire permission |
   |                                                            |
   | == User grants permission through JS Geolocation API UI == |
   |                                                            |
-  |                                | Accept-CH:Geolocation     |
-  | <------------------------------|                           |
-  |                                | Accept-CH-Lifetime: 86400 |
+  | Request to send device location to the server -----------> |
   |                                                            |
-  | Geolocation:Position=X[...] -----------------------------> |
+  |                        | Response based on device location |
+  |                        |                                   |
+  | <----------------------| Accept-CH:Geolocation             |
+  |                        | Accept-CH-Lifetime: 86400         |
   |                                                            |
       </code></pre>
       <p>
-      Then, as long as permission remains granted and the lifetime of CH remains valid, any subsequent navigation (top level frame) request from Client to this origin over HTTPS will include the Geolocation header with Position. So a single roundtrip to the server will be required to provide a response based on device location.
+      Then, from now on, as long as permission remains granted and the lifetime of CH remains valid, any subsequent navigation (top level frame) request from Client to this origin over HTTPS will include the Geolocation header with Position. <b>The next flow clearly shows the main benefit of the Geolocation CH.</b> A single roundtrip to the server will be required to provide a response based on a fresh device location (insted of the current 2 roundtrips needed with the JS Geolocation API).
       </p>
       <pre><code>
 Client                                                        Host
   |                                                            |
   | Geolocation:Position=X[...] -----------------------------> |
+  |                                                            |
   | <----------------------- Response based on device location |
   |                                                            |
       </code></pre>
@@ -105,6 +122,8 @@ Client                                                        Host
       </p>
     <pre><code>
 Client                                                        Host
+  | Request for a geolocation-based service -----------------> |
+  |                                                            |
   |                                | Accept-CH:Geolocation     |
   | <------------------------------|                           |
   |                                | Accept-CH-Lifetime: 86400 |
@@ -117,7 +136,7 @@ Client                                                        Host
   |                                                            |
     </code></pre>
     <p>
-    In any case, the Geolocation Client Hint is an optimization, not a requirement. Taking into account the best effort nature of this technology, any host should be resilient to a client "not reacting" to any Accept-CH request.
+    In any case, the Geolocation Client Hint is an optimization, not a requirement. Taking into account the best effort nature of this technology, any host should be resilient to a client "not reacting" to any Accept-CH request (and use existing JS API in that case).
     </p>
       <p>
       The data exposed through the Geolocation Header matches the data exposed through the W3C Javascript geolocation API.
@@ -126,7 +145,7 @@ Client                                                        Host
       The user agent MUST use a consistent and unified permission-control mechanism for both location-sharing technologies, to guarantee user clarity. In particular, the Geolocation Client Hint MUST rely on the state of the geolocation permission [[Permissions]].
       </p>
       <p>
-      A certain origin MUST first obtain permissions through the JS Geolocation API in order to start receiving the Geolocation Position data. The Geolocation Client Hint is not adding any new user interface in order to acquire geolocation permission, and will rely on the existing JS permission acquisition mechanisms and per-origin semantics.
+      A certain origin MUST first obtain permissions through the JS Geolocation API in order to start receiving the Geolocation Position data. The Geolocation Client Hint is not adding any new user interface in order to acquire geolocation permission, and will rely on the existing JS permission acquisition mechanisms and per-origin semantics. This way, no new surface are is added.
       </p>
   </section>
 
